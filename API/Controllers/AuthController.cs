@@ -1,5 +1,4 @@
 ﻿using API.Models;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -34,6 +33,7 @@ namespace API.Controllers
                 var tokeOptions = new JwtSecurityToken(
                     issuer: "https://localhost:5001",
                     audience: "https://localhost:5001",
+                    claims: new List<Claim> { new Claim(ClaimTypes.Name, user.UserName!) },
                     expires: DateTime.Now.AddMinutes(5),
                     signingCredentials: signinCredentials
                 );
