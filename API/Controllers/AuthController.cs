@@ -24,7 +24,6 @@ namespace API.Controllers
             if (loginModel.UserName!.Contains(' ') || loginModel.Password!.Contains(' '))
             {
                 return Unauthorized();
-
             }
 
             // selects user
@@ -52,7 +51,6 @@ namespace API.Controllers
                 return BadRequest("Invalid client request");
             }
             if (user.CheckValidity())
-
             {
                 // checks if userame exists in database
                 SqlCommand cmd = new("SELECT 1 FROM users WHERE username=@username");
@@ -74,11 +72,9 @@ namespace API.Controllers
                     {
                         dbService.Insert(cmd);
                         return Login(new LoginModel(user.UserName, user.Password));
-
                     }
                     catch (Exception)
                     {
-
                         return StatusCode(500);
                     }
                 }
@@ -102,19 +98,16 @@ namespace API.Controllers
             {
                 int rowsAffected = dbService.Delete(cmd);
                 return Ok();
-
             }
             catch (Exception)
             {
                 return StatusCode(500);
             }
-
         }
 
         [HttpPut("UpdateUser"), Authorize]
         public IActionResult UpdateUser([FromBody] UserModel user)
         {
-
             if (user is null)
             {
                 return BadRequest("Invalid client request");
@@ -171,11 +164,9 @@ namespace API.Controllers
                     {
                         dbService.Insert(cmd);
                         return Login(new LoginModel(userToBeUpdated.UserName, userToBeUpdated.Password));
-
                     }
                     catch (Exception)
                     {
-
                         return Unauthorized();
                     }
                 }
@@ -184,7 +175,6 @@ namespace API.Controllers
             catch (Exception)
             {
                 return StatusCode(500);
-
             }
         }
     }

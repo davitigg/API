@@ -7,7 +7,6 @@ namespace API.Services
     {
         SqlConnection cnn = new SqlConnection(@"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=testDB;Integrated Security=True;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False");
         SqlDataAdapter adapter = new SqlDataAdapter();
-
         public int Insert(SqlCommand cmd)
         {
             cmd.Connection = cnn;
@@ -57,6 +56,5 @@ namespace API.Services
             cnn.Close();
             return rowsAffected;
         }
-
     }
 }

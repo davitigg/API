@@ -33,7 +33,6 @@ namespace API.Services
 
             return tokenString;
         }
-
         public string GetData(JwtSecurityToken jwtToken, string key)
         {
             return jwtToken.Claims.First(claim => claim.Type == key).Value;
