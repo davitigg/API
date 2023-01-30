@@ -1,8 +1,9 @@
-﻿using API.Models;
+﻿using API.Database;
+using API.Models;
 using API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 
 namespace API.Controllers
 {
@@ -10,15 +11,19 @@ namespace API.Controllers
     [ApiController]
     public class ItemsController : ControllerBase
     {
-        private readonly DBService dbService = new();
         private readonly TokenService tokenService = new();
+        private readonly DataContext context;
+        public ItemsController(DataContext context)
+        {
+            this.context = context;
+        }
 
         [HttpGet(), Authorize]
         public IActionResult GetItems()
         {
             try
             {
-                List<Item> list = dbService.SelectItems();
+                List<Item> list = this.context.Items.ToList();
                 return Ok(list);
             }
             catch (Exception)
@@ -34,7 +39,16 @@ namespace API.Controllers
             var userId = int.Parse(tokenService.GetData(jwtToken, "id"));
             try
             {
-                List<CartItem> list = dbService.SelectCartItems(userId);
+                List<CartItem> list = this.context.Cart
+                    .Where(i => i.User!.Id == userId)
+                    .Include(i => i.User)
+                    .Include(i => i.Item)
+                    .ToList();
+                list.ForEach(i =>
+                {
+                    i.User!.Password = "";
+                    i.SumPrice = i.Quantity * i.Item!.Price;
+                });
                 return Ok(list);
             }
             catch (Exception)
@@ -51,61 +65,42 @@ namespace API.Controllers
             var itemId = cartUpdate.ItemId;
             var step = cartUpdate.Step;
 
-            CartItem cartItem = dbService.SelectCartItem(userId, itemId);
-            Item item = dbService.SelectItem(itemId);
+            CartItem cartItem = this.context.Cart.SingleOrDefault(i => i.User!.Id == userId && i.Item!.Id == itemId)!;
+            Item item = this.context.Items.SingleOrDefault(i => i.Id == itemId)!;
 
             // check if item is remaining
             if (item.Quantity < 1 && step > 0)
             {
                 return Conflict("ნივთის რაოდენობა ამოწურულია!");
             }
-
             if (cartItem != null)
             {
                 if (cartItem.Quantity < 1 && step < 0)
                 {
                     return BadRequest("invalid request!");
                 }
-                var newQuantity = step + cartItem.Quantity;
-
-                // update cart item
-                SqlCommand cmd = new("BEGIN TRANSACTION; " +
-                    "UPDATE cart SET quantity=@cartQuantity WHERE userId=@userId AND itemId=@itemId " +
-                    "UPDATE items SET quantity = @itemsQuantity WHERE items.id = @itemId; " +
-                    "COMMIT;  ");
-
-                // delete cart item if qnty=0
-                if (newQuantity == 0)
+                cartItem.Quantity += step;
+                item.Quantity -= step;
+                if (cartItem.Quantity == 0)
                 {
-                    cmd = new("BEGIN TRANSACTION; " +
-                        "DELETE FROM cart WHERE userId=@userId AND itemId=@itemId " +
-                        "UPDATE items SET quantity = @itemsQuantity WHERE items.id = @itemId; " +
-                        "COMMIT;  ");
+                    this.context.Cart.Remove(cartItem);
                 }
-                cmd.Parameters.AddWithValue("@userId", userId);
-                cmd.Parameters.AddWithValue("@itemId", itemId);
-                cmd.Parameters.AddWithValue("@cartQuantity", newQuantity);
-                cmd.Parameters.AddWithValue("@itemsQuantity", item.Quantity - step);
-
-                dbService.Update(cmd);
-
+                else
+                {
+                    this.context.Cart.Update(cartItem);
+                }
+                this.context.Items.Update(item);
+                this.context.SaveChanges();
                 return Ok("ნივთი კალათაში წარმატებით განახლდა!");
             }
             else
             {
-                //insert new cart item
-                SqlCommand cmd = new("BEGIN TRANSACTION; " +
-                    "INSERT INTO cart (userId, itemId, quantity) VALUES (@userId, @itemId, @cartQuantity); " +
-                    "UPDATE items SET quantity = @itemsQuantity WHERE items.id = @itemId; " +
-                    "COMMIT;");
-                cmd.Parameters.AddWithValue("@userId", userId);
-                cmd.Parameters.AddWithValue("@itemId", itemId);
-                cmd.Parameters.AddWithValue("@cartQuantity", step);
-                cmd.Parameters.AddWithValue("@itemsQuantity", item.Quantity - step);
-
-                dbService.Insert(cmd);
-
-                return Ok("ნივთი კალათაში წარმატებით დაემატა!");
+                cartItem = new(0, userId, itemId, step);
+                item.Quantity -= step;
+                this.context.Cart.Add(cartItem);
+                this.context.Items.Update(item);
+                this.context.SaveChanges();
+                return Ok("ნივთი კალათაში წარმატებით განახლდა!");
             }
         }
         [HttpDelete("cart/delete/{id:int}"), Authorize]
@@ -116,28 +111,20 @@ namespace API.Controllers
             var userId = int.Parse(tokenService.GetData(jwtToken, "id"));
             var itemId = id;
 
-            CartItem cartItem = dbService.SelectCartItem(userId, itemId);
-            Item item = dbService.SelectItem(itemId);
-
-            SqlCommand cmd = new("BEGIN TRANSACTION; " +
-                             "DELETE FROM cart WHERE userId=@userId AND itemId=@itemId " +
-                             "UPDATE items SET quantity = @itemsQuantity WHERE items.id = @itemId; " +
-                             "COMMIT;  ");
-
-            cmd.Parameters.AddWithValue("@userId", userId);
-            cmd.Parameters.AddWithValue("@itemId", itemId);
-            cmd.Parameters.AddWithValue("@itemsQuantity", item.Quantity + cartItem.Quantity);
+            CartItem cartItem = this.context.Cart.SingleOrDefault(i => i.User!.Id == userId && i.Item!.Id == itemId)!;
+            Item item = this.context.Items.SingleOrDefault(i => i.Id == itemId)!;
+            item.Quantity += cartItem.Quantity;
             try
             {
-                dbService.Delete(cmd);
+                this.context.Cart.Remove(cartItem);
+                this.context.Items.Update(item);
+                this.context.SaveChanges();
                 return Ok("ნივთი კალათიდან წაიშალა!");
             }
             catch (Exception)
             {
                 return BadRequest("invalid request!");
             }
-
         }
-
     }
 }

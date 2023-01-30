@@ -1,8 +1,8 @@
-﻿using API.Models;
+﻿using API.Database;
+using API.Models;
 using API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Data.SqlClient;
 using System.IdentityModel.Tokens.Jwt;
 
 namespace API.Controllers
@@ -11,8 +11,13 @@ namespace API.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
-        private readonly DBService dbService = new();
         private readonly TokenService tokenService = new();
+        private readonly DataContext context;
+
+        public AuthController(DataContext context)
+        {
+            this.context = context;
+        }
 
         [HttpPost("login")]
         public IActionResult Login([FromBody] Login loginModel)
@@ -25,21 +30,16 @@ namespace API.Controllers
             {
                 return Unauthorized();
             }
-
-            // selects user
-            SqlCommand cmd = new("SELECT * FROM users WHERE email=@email AND password=@password");
-            cmd.Parameters.AddWithValue("@email", loginModel.Email);
-            cmd.Parameters.AddWithValue("@password", loginModel.Password);
-
             try
             {
-                var user = dbService.SelectUser(cmd);
+                var user = this.context.Users
+                                .Single(user => user.Email == loginModel.Email && user.Password == loginModel.Password);
                 var tokenString = tokenService.GenerateToken(user);
                 return Ok(new AuthenticatedResponse { Token = tokenString });
             }
             catch (Exception)
             {
-                return Unauthorized();
+                return Unauthorized("შეამოწმეთ მომხმარებელი და პაროლი");
             }
         }
 
@@ -50,36 +50,25 @@ namespace API.Controllers
             {
                 return BadRequest("Invalid client request");
             }
-            if (user.CheckValidity())
+            if (!user.CheckValidity())
             {
-                // checks if userame exists in database
-                SqlCommand cmd = new("SELECT 1 FROM users WHERE email=@email");
-                cmd.Parameters.AddWithValue("@email", user.Email);
-                var userExist = dbService.IsRowSelected(cmd);
-
-                if (!userExist)
+                return BadRequest("გთხოვთ შეიყვანოთ ვალიდური მონაცემები");
+            }
+            try
+            {
+                var userExist = this.context.Users.SingleOrDefault(u => u.Email == user.Email);
+                if (userExist == null)
                 {
-                    // insert new user into the database
-                    cmd = new("INSERT INTO users (email, password, first_name, last_name) Output Inserted.id " +
-                       "VALUES (@email, @password, @first_name, @last_name)");
-                    cmd.Parameters.AddWithValue("@email", user.Email);
-                    cmd.Parameters.AddWithValue("@password", user.Password);
-                    cmd.Parameters.AddWithValue("@first_name", user.FName);
-                    cmd.Parameters.AddWithValue("@last_name", user.LName);
-
-                    try
-                    {
-                        dbService.Insert(cmd);
-                        return Login(new Login(user.Email, user.Password));
-                    }
-                    catch (Exception)
-                    {
-                        return StatusCode(500);
-                    }
+                    this.context.Users.Add(user);
+                    this.context.SaveChanges();
+                    return Login(new Login(user.Email, user.Password));
                 }
                 else return Conflict("ასეთი მომხმარებელი უკვე არსებობს");
             }
-            else return BadRequest("გთხოვთ შეიყვანოთ ვალიდური მონაცემები");
+            catch (Exception)
+            {
+                return StatusCode(500);
+            }
         }
 
         [HttpDelete("delete"), Authorize]
@@ -88,14 +77,12 @@ namespace API.Controllers
             Request.Headers.TryGetValue("authorization", out var token);
             string jwtTokenString = token.ToString().Replace("Bearer ", "");
             var jwtToken = new JwtSecurityToken(jwtTokenString);
-
             var id = int.Parse(tokenService.GetData(jwtToken, "id"));
-
-            SqlCommand cmd = new("DELETE FROM users WHERE users.id=@id");
-            cmd.Parameters.AddWithValue("@id", id);
             try
             {
-                int rowsAffected = dbService.Delete(cmd);
+                var User = this.context.Users.Single(u => u.Id == id);
+                this.context.Users.Remove(User);
+                this.context.SaveChanges();
                 return Ok();
             }
             catch (Exception)
@@ -105,66 +92,42 @@ namespace API.Controllers
         }
 
         [HttpPut("UpdateUser"), Authorize]
-        public IActionResult UpdateUser([FromBody] User user)
+        public IActionResult UpdateUser([FromBody] User updatedUser)
         {
-            if (user is null)
+            if (updatedUser is null)
             {
                 return BadRequest("Invalid client request");
             }
-
             // get userId from jwt token
             var jwtToken = tokenService.GetToken(Request);
             var userId = int.Parse(tokenService.GetData(jwtToken, "id"));
-
-            // get user from the database
-            SqlCommand cmd = new("SELECT * FROM users WHERE id=@id");
-            cmd.Parameters.AddWithValue("@id", userId);
             try
             {
-                var userToBeUpdated = dbService.SelectUser(cmd);
-
                 // check if new username exists in the database
-                cmd = new("SELECT * FROM users WHERE email=@email AND NOT id=@id");
-                cmd.Parameters.AddWithValue("@id", userId);
-                cmd.Parameters.AddWithValue("@email", user.Email);
-                var usernameExists = dbService.IsRowSelected(cmd);
-                if (usernameExists)
+                if (this.context.Users.SingleOrDefault(u => u.Email == updatedUser.Email && u.Id != userId) != null)
                 {
                     return Conflict("ასეთი მომხმარებელი უკვე არსებობს");
                 }
-
+                // get user from the database
+                var user = this.context.Users.SingleOrDefault(u => u.Id == userId);
                 // apply user changes
-                userToBeUpdated.Email = user.Email;
-                if (!(user.Password.Trim().Length == 0))
+                user!.Email = updatedUser.Email;
+                if (!(updatedUser.Password.Trim().Length == 0))
                 {
-                    userToBeUpdated.Password = user.Password;
+                    user.Password = updatedUser.Password;
                 }
-                userToBeUpdated.FName = user.FName;
-                userToBeUpdated.LName = user.LName;
-                userToBeUpdated.Email = user.Email;
+                user.FName = updatedUser.FName;
+                user.LName = updatedUser.LName;
+                user.Email = updatedUser.Email;
 
-
-                if (userToBeUpdated.CheckValidity())
+                if (user.CheckValidity())
                 {
                     // update user in the database
-                    cmd = new("UPDATE users SET email=@email, password =@password, first_name =@first_name, last_name =@last_name WHERE users.id=@id");
-                    cmd.Parameters.AddWithValue("@id", userToBeUpdated.Id);
-                    cmd.Parameters.AddWithValue("@email", userToBeUpdated.Email);
-                    cmd.Parameters.AddWithValue("@password", userToBeUpdated.Password);
-                    cmd.Parameters.AddWithValue("@first_name", userToBeUpdated.FName);
-                    cmd.Parameters.AddWithValue("@last_name", userToBeUpdated.LName);
-
-                    try
-                    {
-                        dbService.Insert(cmd);
-                        return Login(new Login(userToBeUpdated.Email, userToBeUpdated.Password));
-                    }
-                    catch (Exception)
-                    {
-                        return Unauthorized();
-                    }
+                    this.context.Users.Update(user);
+                    this.context.SaveChanges();
+                    return Login(new Login(user.Email, user.Password));
                 }
-                else return BadRequest("გთხოვთ შეიყვანეთ ვალიდური მონაცემები");
+                return BadRequest("გთხოვთ შეიყვანეთ ვალიდური მონაცემები");
             }
             catch (Exception)
             {
