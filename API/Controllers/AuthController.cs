@@ -21,14 +21,14 @@ namespace API.Controllers
             {
                 return BadRequest("Invalid client request");
             }
-            if (loginModel.UserName!.Contains(' ') || loginModel.Password!.Contains(' '))
+            if (loginModel.Email!.Contains(' ') || loginModel.Password!.Contains(' '))
             {
                 return Unauthorized();
             }
 
             // selects user
-            SqlCommand cmd = new("SELECT * FROM users WHERE username=@username AND password=@password");
-            cmd.Parameters.AddWithValue("@username", loginModel.UserName);
+            SqlCommand cmd = new("SELECT * FROM users WHERE email=@email AND password=@password");
+            cmd.Parameters.AddWithValue("@email", loginModel.Email);
             cmd.Parameters.AddWithValue("@password", loginModel.Password);
 
             try
@@ -53,25 +53,24 @@ namespace API.Controllers
             if (user.CheckValidity())
             {
                 // checks if userame exists in database
-                SqlCommand cmd = new("SELECT 1 FROM users WHERE username=@username");
-                cmd.Parameters.AddWithValue("@username", user.UserName);
+                SqlCommand cmd = new("SELECT 1 FROM users WHERE email=@email");
+                cmd.Parameters.AddWithValue("@email", user.Email);
                 var userExist = dbService.IsRowSelected(cmd);
 
                 if (!userExist)
                 {
                     // insert new user into the database
-                    cmd = new("INSERT INTO users (username, password, first_name, last_name, email) Output Inserted.id " +
-                       "VALUES (@username, @password, @first_name, @last_name, @email)");
-                    cmd.Parameters.AddWithValue("@username", user.UserName);
+                    cmd = new("INSERT INTO users (email, password, first_name, last_name) Output Inserted.id " +
+                       "VALUES (@email, @password, @first_name, @last_name)");
+                    cmd.Parameters.AddWithValue("@email", user.Email);
                     cmd.Parameters.AddWithValue("@password", user.Password);
                     cmd.Parameters.AddWithValue("@first_name", user.FName);
                     cmd.Parameters.AddWithValue("@last_name", user.LName);
-                    cmd.Parameters.AddWithValue("@email", user.Email);
 
                     try
                     {
                         dbService.Insert(cmd);
-                        return Login(new LoginModel(user.UserName, user.Password));
+                        return Login(new LoginModel(user.Email, user.Password));
                     }
                     catch (Exception)
                     {
@@ -114,9 +113,7 @@ namespace API.Controllers
             }
 
             // get userId from jwt token
-            Request.Headers.TryGetValue("authorization", out var token);
-            string jwtTokenString = token.ToString().Replace("Bearer ", "");
-            var jwtToken = new JwtSecurityToken(jwtTokenString);
+            var jwtToken = tokenService.GetToken(Request);
             var userId = int.Parse(tokenService.GetData(jwtToken, "id"));
 
             // get user from the database
@@ -127,9 +124,9 @@ namespace API.Controllers
                 var userToBeUpdated = dbService.SelectUser(cmd);
 
                 // check if new username exists in the database
-                cmd = new("SELECT * FROM users WHERE username=@username AND NOT id=@id");
+                cmd = new("SELECT * FROM users WHERE email=@email AND NOT id=@id");
                 cmd.Parameters.AddWithValue("@id", userId);
-                cmd.Parameters.AddWithValue("@username", user.UserName);
+                cmd.Parameters.AddWithValue("@email", user.Email);
                 var usernameExists = dbService.IsRowSelected(cmd);
                 if (usernameExists)
                 {
@@ -137,7 +134,7 @@ namespace API.Controllers
                 }
 
                 // apply user changes
-                userToBeUpdated.UserName = user.UserName;
+                userToBeUpdated.Email = user.Email;
                 if (!(user.Password.Trim().Length == 0))
                 {
                     userToBeUpdated.Password = user.Password;
@@ -150,20 +147,17 @@ namespace API.Controllers
                 if (userToBeUpdated.CheckValidity())
                 {
                     // update user in the database
-                    cmd = new("UPDATE users " +
-                       "SET username = @username, password = @password, first_name = @first_name, last_name = @last_name, email=@email " +
-                       "WHERE users.id=@id;");
+                    cmd = new("UPDATE users SET email=@email, password =@password, first_name =@first_name, last_name =@last_name WHERE users.id=@id");
                     cmd.Parameters.AddWithValue("@id", userToBeUpdated.Id);
-                    cmd.Parameters.AddWithValue("@username", userToBeUpdated.UserName);
+                    cmd.Parameters.AddWithValue("@email", userToBeUpdated.Email);
                     cmd.Parameters.AddWithValue("@password", userToBeUpdated.Password);
                     cmd.Parameters.AddWithValue("@first_name", userToBeUpdated.FName);
                     cmd.Parameters.AddWithValue("@last_name", userToBeUpdated.LName);
-                    cmd.Parameters.AddWithValue("@email", userToBeUpdated.Email);
 
                     try
                     {
                         dbService.Insert(cmd);
-                        return Login(new LoginModel(userToBeUpdated.UserName, userToBeUpdated.Password));
+                        return Login(new LoginModel(userToBeUpdated.Email, userToBeUpdated.Password));
                     }
                     catch (Exception)
                     {

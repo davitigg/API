@@ -3,20 +3,18 @@
     public class UserModel
     {
         public int Id { get; set; }
-        public string UserName { get; set; }
+        public string Email { get; set; }
         public string Password { get; set; }
         public string FName { get; set; }
         public string LName { get; set; }
-        public string Email { get; set; }
 
-        public UserModel(int id, string userName, string password, string fName, string lName, string email)
+        public UserModel(int id, string email, string password, string fName, string lName)
         {
             Id = id;
-            UserName = userName.ToLower() ?? throw new ArgumentNullException(nameof(userName));
+            Email = email.ToLower() ?? throw new ArgumentNullException(nameof(email));
             Password = password ?? throw new ArgumentNullException(nameof(password));
             FName = fName.ToLower() ?? throw new ArgumentNullException(nameof(fName));
             LName = lName.ToLower() ?? throw new ArgumentNullException(nameof(lName));
-            Email = email.ToLower() ?? throw new ArgumentNullException(nameof(email));
         }
 
         public bool CheckValidity()
@@ -29,7 +27,7 @@
                 ;
             }
 
-            if (!validate(UserName) || UserName.Length < 6)
+            if (!validate(Email))
             {
                 return false;
             }
@@ -45,10 +43,7 @@
             {
                 return false;
             }
-            if (!validate(Email))
-            {
-                return false;
-            }
+
             return true;
         }
     }

@@ -26,18 +26,6 @@ namespace API.Services
             cnn.Close();
             return rows;
         }
-        public UserModel SelectUser(SqlCommand cmd)
-        {
-            cmd.Connection = cnn;
-            adapter.SelectCommand = cmd;
-            cnn.Open();
-            var reader = adapter.SelectCommand.ExecuteReader();
-            reader.Read();
-            UserModel user = new UserModel(reader.GetInt32(0), reader.GetString(1), reader.GetString(2),
-                reader.GetString(3), reader.GetString(4), reader.GetString(5));
-            cnn.Close();
-            return user;
-        }
         public int Update(SqlCommand cmd)
         {
             cmd.Connection = cnn;
@@ -55,6 +43,102 @@ namespace API.Services
             var rowsAffected = adapter.DeleteCommand.ExecuteNonQuery();
             cnn.Close();
             return rowsAffected;
+        }
+        public UserModel SelectUser(SqlCommand cmd)
+        {
+            cmd.Connection = cnn;
+            adapter.SelectCommand = cmd;
+            cnn.Open();
+            var reader = adapter.SelectCommand.ExecuteReader();
+            reader.Read();
+            UserModel user = new UserModel(reader.GetInt32(0), reader.GetString(1), reader.GetString(2),
+                reader.GetString(3), reader.GetString(4));
+            cnn.Close();
+            return user;
+        }
+        public List<ItemModel> SelectItems()
+        {
+            SqlCommand cmd = new("SELECT * FROM items");
+            cmd.Connection = cnn;
+            adapter.SelectCommand = cmd;
+            cnn.Open();
+            var reader = adapter.SelectCommand.ExecuteReader();
+            List<ItemModel> items = new();
+            while (reader.Read())
+            {
+                items.Add(new ItemModel(reader.GetInt32(0), reader.GetString(1),
+                    reader.GetInt32(2), reader.GetInt32(3)));
+            }
+            cnn.Close();
+            return items;
+        }
+        public ItemModel SelectItem(int itemId)
+        {
+            SqlCommand cmd = new("SELECT * FROM items Where items.id=@itemId");
+            cmd.Parameters.AddWithValue("@itemId", itemId);
+            cmd.Connection = cnn;
+            adapter.SelectCommand = cmd;
+            cnn.Open();
+            var reader = adapter.SelectCommand.ExecuteReader();
+            reader.Read();
+            var item = new ItemModel(reader.GetInt32(0), reader.GetString(1),
+                reader.GetInt32(2), reader.GetInt32(3));
+            cnn.Close();
+            return item;
+        }
+        public List<CartItemModel> SelectCartItems(int userId)
+        {
+            SqlCommand cmd = new("SELECT cart.id, cart.itemId, items.item_name, items.price, cart.quantity " +
+                "FROM cart " +
+                "INNER JOIN items ON cart.itemId=items.id " +
+                "WHERE cart.userId=@userId " +
+                "ORDER BY cart.id;");
+            cmd.Parameters.AddWithValue("@userId", userId);
+            cmd.Connection = cnn;
+            adapter.SelectCommand = cmd;
+            cnn.Open();
+            var reader = adapter.SelectCommand.ExecuteReader();
+            List<CartItemModel> items = new();
+            while (reader.Read())
+            {
+                items.Add(new CartItemModel(reader.GetInt32(0), reader.GetInt32(1), reader.GetString(2), reader.GetInt32(3), reader.GetInt32(4)));
+            }
+            cnn.Close();
+            return items;
+        }
+        public CartItemModel SelectCartItem(int userId, int itemId)
+        {
+            SqlCommand cmd = new("SELECT cart.id, cart.itemId, items.item_name, items.price, cart.quantity " +
+                "FROM cart " +
+                "INNER JOIN items ON cart.itemId=items.id " +
+                "WHERE cart.userId=@userId AND cart.itemId=@itemId;");
+            cmd.Parameters.AddWithValue("@userId", userId);
+            cmd.Parameters.AddWithValue("@itemId", itemId);
+            cmd.Connection = cnn;
+            adapter.SelectCommand = cmd;
+            cnn.Open();
+            try
+            {
+                var reader = adapter.SelectCommand.ExecuteReader();
+                reader.Read();
+                CartItemModel item = new(reader.GetInt32(0), reader.GetInt32(1), reader.GetString(2), reader.GetInt32(3), reader.GetInt32(4));
+                return item;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+            finally { cnn.Close(); }
+        }
+        public int InsertCartItem(int userId, int itemId, int quantity)
+        {
+            SqlCommand cmd = new("INSERT INTO users (email, password, first_name, last_name) Output Inserted.id " +
+                       "VALUES (N'test', N'test', N'test', N'test')");
+            cmd.Connection = cnn;
+            cnn.Open();
+            var returnValue = cmd.ExecuteNonQuery();
+            cnn.Close();
+            return returnValue;
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using API.Models;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -14,11 +15,9 @@ namespace API.Services
             var signinCredentials = new SigningCredentials(secretKey, SecurityAlgorithms.HmacSha256);
             List<Claim> claims = new List<Claim> {
                 new Claim("id", user.Id.ToString()),
-                new Claim("username", user.UserName!),
+                new Claim("email", user.Email!),
                 new Claim("firstname", user.FName!),
                 new Claim("lastname", user.LName!),
-                new Claim("email", user.Email!),
-
             };
 
             var tokeOptions = new JwtSecurityToken(
@@ -32,6 +31,13 @@ namespace API.Services
             var tokenString = new JwtSecurityTokenHandler().WriteToken(tokeOptions);
 
             return tokenString;
+        }
+
+        public JwtSecurityToken GetToken(HttpRequest request)
+        {
+            request.Headers.TryGetValue("authorization", out var token);
+            string jwtTokenString = token.ToString().Replace("Bearer ", "");
+            return new JwtSecurityToken(jwtTokenString);
         }
         public string GetData(JwtSecurityToken jwtToken, string key)
         {
