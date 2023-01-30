@@ -44,35 +44,35 @@ namespace API.Services
             cnn.Close();
             return rowsAffected;
         }
-        public UserModel SelectUser(SqlCommand cmd)
+        public User SelectUser(SqlCommand cmd)
         {
             cmd.Connection = cnn;
             adapter.SelectCommand = cmd;
             cnn.Open();
             var reader = adapter.SelectCommand.ExecuteReader();
             reader.Read();
-            UserModel user = new UserModel(reader.GetInt32(0), reader.GetString(1), reader.GetString(2),
+            User user = new User(reader.GetInt32(0), reader.GetString(1), reader.GetString(2),
                 reader.GetString(3), reader.GetString(4));
             cnn.Close();
             return user;
         }
-        public List<ItemModel> SelectItems()
+        public List<Item> SelectItems()
         {
             SqlCommand cmd = new("SELECT * FROM items");
             cmd.Connection = cnn;
             adapter.SelectCommand = cmd;
             cnn.Open();
             var reader = adapter.SelectCommand.ExecuteReader();
-            List<ItemModel> items = new();
+            List<Item> items = new();
             while (reader.Read())
             {
-                items.Add(new ItemModel(reader.GetInt32(0), reader.GetString(1),
+                items.Add(new Item(reader.GetInt32(0), reader.GetString(1),
                     reader.GetInt32(2), reader.GetInt32(3)));
             }
             cnn.Close();
             return items;
         }
-        public ItemModel SelectItem(int itemId)
+        public Item SelectItem(int itemId)
         {
             SqlCommand cmd = new("SELECT * FROM items Where items.id=@itemId");
             cmd.Parameters.AddWithValue("@itemId", itemId);
@@ -81,12 +81,12 @@ namespace API.Services
             cnn.Open();
             var reader = adapter.SelectCommand.ExecuteReader();
             reader.Read();
-            var item = new ItemModel(reader.GetInt32(0), reader.GetString(1),
+            var item = new Item(reader.GetInt32(0), reader.GetString(1),
                 reader.GetInt32(2), reader.GetInt32(3));
             cnn.Close();
             return item;
         }
-        public List<CartItemModel> SelectCartItems(int userId)
+        public List<CartItem> SelectCartItems(int userId)
         {
             SqlCommand cmd = new("SELECT cart.id, cart.itemId, items.item_name, items.price, cart.quantity " +
                 "FROM cart " +
@@ -98,15 +98,15 @@ namespace API.Services
             adapter.SelectCommand = cmd;
             cnn.Open();
             var reader = adapter.SelectCommand.ExecuteReader();
-            List<CartItemModel> items = new();
+            List<CartItem> items = new();
             while (reader.Read())
             {
-                items.Add(new CartItemModel(reader.GetInt32(0), reader.GetInt32(1), reader.GetString(2), reader.GetInt32(3), reader.GetInt32(4)));
+                items.Add(new CartItem(reader.GetInt32(0), reader.GetInt32(1), reader.GetString(2), reader.GetInt32(3), reader.GetInt32(4)));
             }
             cnn.Close();
             return items;
         }
-        public CartItemModel SelectCartItem(int userId, int itemId)
+        public CartItem SelectCartItem(int userId, int itemId)
         {
             SqlCommand cmd = new("SELECT cart.id, cart.itemId, items.item_name, items.price, cart.quantity " +
                 "FROM cart " +
@@ -121,7 +121,7 @@ namespace API.Services
             {
                 var reader = adapter.SelectCommand.ExecuteReader();
                 reader.Read();
-                CartItemModel item = new(reader.GetInt32(0), reader.GetInt32(1), reader.GetString(2), reader.GetInt32(3), reader.GetInt32(4));
+                CartItem item = new(reader.GetInt32(0), reader.GetInt32(1), reader.GetString(2), reader.GetInt32(3), reader.GetInt32(4));
                 return item;
             }
             catch (Exception)

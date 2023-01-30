@@ -1,6 +1,6 @@
 ﻿namespace API.Models
 {
-    public class CartItemModel
+    public class CartItem
     {
         public int Id { get; set; }
         public int ItemId { get; set; }
@@ -9,7 +9,7 @@
         public int Quantity { get; set; }
         public int SumPrice { get; set; }
 
-        public CartItemModel(int id, int itemId, string name, int price, int quantity)
+        public CartItem(int id, int itemId, string name, int price, int quantity)
         {
             Id = id;
             ItemId = itemId;

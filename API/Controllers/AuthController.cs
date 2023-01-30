@@ -15,7 +15,7 @@ namespace API.Controllers
         private readonly TokenService tokenService = new();
 
         [HttpPost("login")]
-        public IActionResult Login([FromBody] LoginModel loginModel)
+        public IActionResult Login([FromBody] Login loginModel)
         {
             if (loginModel is null)
             {
@@ -44,7 +44,7 @@ namespace API.Controllers
         }
 
         [HttpPost("register")]
-        public IActionResult Register([FromBody] UserModel user)
+        public IActionResult Register([FromBody] User user)
         {
             if (user is null)
             {
@@ -70,7 +70,7 @@ namespace API.Controllers
                     try
                     {
                         dbService.Insert(cmd);
-                        return Login(new LoginModel(user.Email, user.Password));
+                        return Login(new Login(user.Email, user.Password));
                     }
                     catch (Exception)
                     {
@@ -105,7 +105,7 @@ namespace API.Controllers
         }
 
         [HttpPut("UpdateUser"), Authorize]
-        public IActionResult UpdateUser([FromBody] UserModel user)
+        public IActionResult UpdateUser([FromBody] User user)
         {
             if (user is null)
             {
@@ -157,7 +157,7 @@ namespace API.Controllers
                     try
                     {
                         dbService.Insert(cmd);
-                        return Login(new LoginModel(userToBeUpdated.Email, userToBeUpdated.Password));
+                        return Login(new Login(userToBeUpdated.Email, userToBeUpdated.Password));
                     }
                     catch (Exception)
                     {

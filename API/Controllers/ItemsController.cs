@@ -18,7 +18,7 @@ namespace API.Controllers
         {
             try
             {
-                List<ItemModel> list = dbService.SelectItems();
+                List<Item> list = dbService.SelectItems();
                 return Ok(list);
             }
             catch (Exception)
@@ -34,7 +34,7 @@ namespace API.Controllers
             var userId = int.Parse(tokenService.GetData(jwtToken, "id"));
             try
             {
-                List<CartItemModel> list = dbService.SelectCartItems(userId);
+                List<CartItem> list = dbService.SelectCartItems(userId);
                 return Ok(list);
             }
             catch (Exception)
@@ -43,7 +43,7 @@ namespace API.Controllers
             }
         }
         [HttpPost("cart"), Authorize]
-        public IActionResult UpdateCart([FromBody] CartUpdateModel cartUpdate)
+        public IActionResult UpdateCart([FromBody] CartUpdate cartUpdate)
         {
             // get userId from jwt token
             var jwtToken = tokenService.GetToken(Request);
@@ -51,8 +51,8 @@ namespace API.Controllers
             var itemId = cartUpdate.ItemId;
             var step = cartUpdate.Step;
 
-            CartItemModel cartItem = dbService.SelectCartItem(userId, itemId);
-            ItemModel item = dbService.SelectItem(itemId);
+            CartItem cartItem = dbService.SelectCartItem(userId, itemId);
+            Item item = dbService.SelectItem(itemId);
 
             // check if item is remaining
             if (item.Quantity < 1 && step > 0)
@@ -116,8 +116,8 @@ namespace API.Controllers
             var userId = int.Parse(tokenService.GetData(jwtToken, "id"));
             var itemId = id;
 
-            CartItemModel cartItem = dbService.SelectCartItem(userId, itemId);
-            ItemModel item = dbService.SelectItem(itemId);
+            CartItem cartItem = dbService.SelectCartItem(userId, itemId);
+            Item item = dbService.SelectItem(itemId);
 
             SqlCommand cmd = new("BEGIN TRANSACTION; " +
                              "DELETE FROM cart WHERE userId=@userId AND itemId=@itemId " +

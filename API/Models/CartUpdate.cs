@@ -1,11 +1,11 @@
 ﻿namespace API.Models
 {
-    public class CartUpdateModel
+    public class CartUpdate
     {
         public int ItemId { get; set; }
         public int Step { get; set; }
 
-        public CartUpdateModel(int itemId, int step)
+        public CartUpdate(int itemId, int step)
         {
             ItemId = itemId;
             Step = step;
