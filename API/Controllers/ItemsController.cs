@@ -19,37 +19,12 @@ namespace API.Controllers
         }
 
         [HttpGet(), Authorize]
-        public IActionResult GetItems()
+        public IActionResult Get()
         {
             try
             {
-                List<Item> list = this.context.Items.ToList();
-                return Ok(list);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500);
-            }
-        }
-        [HttpGet("cart"), Authorize]
-        public IActionResult GetCartItems()
-        {
-            // get userId from jwt token
-            var jwtToken = tokenService.GetToken(Request);
-            var userId = int.Parse(tokenService.GetData(jwtToken, "id"));
-            try
-            {
-                List<CartItem> list = this.context.Cart
-                    .Where(i => i.User!.Id == userId)
-                    .Include(i => i.User)
-                    .Include(i => i.Item)
-                    .ToList();
-                list.ForEach(i =>
-                {
-                    i.User!.Password = "";
-                    i.SumPrice = i.Quantity * i.Item!.Price;
-                });
-                return Ok(list);
+                var resp = this.GetAll();
+                return Ok(resp);
             }
             catch (Exception)
             {
@@ -91,7 +66,8 @@ namespace API.Controllers
                 }
                 this.context.Items.Update(item);
                 this.context.SaveChanges();
-                return Ok("ნივთი კალათაში წარმატებით განახლდა!");
+                var resp = this.GetAll();
+                return Ok(resp);
             }
             else
             {
@@ -100,7 +76,8 @@ namespace API.Controllers
                 this.context.Cart.Add(cartItem);
                 this.context.Items.Update(item);
                 this.context.SaveChanges();
-                return Ok("ნივთი კალათაში წარმატებით განახლდა!");
+                var resp = this.GetAll();
+                return Ok(resp);
             }
         }
         [HttpDelete("cart/delete/{id:int}"), Authorize]
@@ -119,12 +96,38 @@ namespace API.Controllers
                 this.context.Cart.Remove(cartItem);
                 this.context.Items.Update(item);
                 this.context.SaveChanges();
-                return Ok("ნივთი კალათიდან წაიშალა!");
+                var resp = this.GetAll();
+                return Ok(resp);
             }
             catch (Exception)
             {
                 return BadRequest("invalid request!");
             }
         }
+        private Dictionary<string, dynamic> GetAll()
+        {
+            // get userId from jwt token
+            var jwtToken = tokenService.GetToken(Request);
+            var userId = int.Parse(tokenService.GetData(jwtToken, "id"));
+
+            List<Item> items = this.context.Items.ToList();
+            List<CartItem> cart = this.context.Cart
+                .Where(i => i.User!.Id == userId)
+                .Include(i => i.User)
+                .Include(i => i.Item)
+                .ToList();
+            cart.ForEach(i =>
+            {
+                i.User!.Password = "";
+                i.SumPrice = i.Quantity * i.Item!.Price;
+            });
+
+            var resp = new Dictionary<string, dynamic>(){
+                {"items", items },
+                {"cart", cart }
+            };
+            return resp;
+        }
+
     }
 }
