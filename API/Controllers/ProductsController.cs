@@ -145,6 +145,7 @@ namespace API.Controllers
             _context.Products.Add(product);
             await _context.SaveChangesAsync();
 
+            product.Seller.Password = "";
             return CreatedAtAction("GetProduct", new { id = product.Id }, product);
         }
 

@@ -110,8 +110,8 @@ namespace API.Controllers
                     throw;
                 }
             }
-            cartProduct.Buyer.Password = "";
-            cartProduct.Product.Seller.Password = "";
+            cartProduct.Buyer!.Password = "";
+            cartProduct.Product.Seller!.Password = "";
             return CreatedAtAction("GetCartProduct", new { id = cartProduct.Id }, cartProduct);
         }
 
@@ -152,6 +152,8 @@ namespace API.Controllers
                 _context.Cart.Add(cartProduct);
                 await _context.SaveChangesAsync();
 
+                cartProduct.Buyer!.Password = "";
+                cartProduct.Product!.Seller!.Password = "";
                 return CreatedAtAction("GetCartProduct", new { id = cartProduct.Id }, cartProduct);
             }
             else
