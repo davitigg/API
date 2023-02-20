@@ -3,6 +3,7 @@ using API.Models;
 using API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.IdentityModel.Tokens.Jwt;
 
 namespace API.Controllers
@@ -12,11 +13,26 @@ namespace API.Controllers
     public class AuthController : ControllerBase
     {
         private readonly TokenService tokenService = new();
-        private readonly DataContext context;
+        private readonly DataContext _context;
 
         public AuthController(DataContext context)
         {
-            this.context = context;
+            _context = context;
+        }
+
+        // GET: api/Auth/Users
+        [HttpGet("Users"), Authorize(Roles = "Admin")]
+        public async Task<ActionResult<IEnumerable<User>>> GetUsers()
+        {
+            var users = await _context.Users
+                .ToListAsync();
+
+            if (users.Count == 0)
+            {
+                return NotFound();
+            }
+            return users;
+
         }
 
         [HttpPost("login")]
@@ -32,7 +48,7 @@ namespace API.Controllers
             }
             try
             {
-                var user = this.context.Users
+                var user = _context.Users
                                 .Single(user => user.Email == loginModel.Email && user.Password == loginModel.Password);
                 var tokenString = tokenService.GenerateToken(user);
                 return Ok(new AuthenticatedResponse { Token = tokenString });
@@ -56,11 +72,11 @@ namespace API.Controllers
             }
             try
             {
-                var userExist = this.context.Users.SingleOrDefault(u => u.Email == user.Email);
+                var userExist = _context.Users.SingleOrDefault(u => u.Email == user.Email);
                 if (userExist == null)
                 {
-                    this.context.Users.Add(user);
-                    this.context.SaveChanges();
+                    _context.Users.Add(user);
+                    _context.SaveChanges();
                     return Login(new Login(user.Email, user.Password));
                 }
                 else return Conflict("ასეთი მომხმარებელი უკვე არსებობს");
@@ -71,7 +87,7 @@ namespace API.Controllers
             }
         }
 
-        [HttpDelete("delete"), Authorize]
+        [HttpDelete("delete")]
         public IActionResult Delete()
         {
             Request.Headers.TryGetValue("authorization", out var token);
@@ -80,9 +96,9 @@ namespace API.Controllers
             var id = int.Parse(tokenService.GetData(jwtToken, "id"));
             try
             {
-                var User = this.context.Users.Single(u => u.Id == id);
-                this.context.Users.Remove(User);
-                this.context.SaveChanges();
+                var User = _context.Users.Single(u => u.Id == id);
+                _context.Users.Remove(User);
+                _context.SaveChanges();
                 return Ok();
             }
             catch (Exception)
@@ -104,12 +120,12 @@ namespace API.Controllers
             try
             {
                 // check if new username exists in the database
-                if (this.context.Users.SingleOrDefault(u => u.Email == updatedUser.Email && u.Id != userId) != null)
+                if (_context.Users.SingleOrDefault(u => u.Email == updatedUser.Email && u.Id != userId) != null)
                 {
                     return Conflict("ასეთი მომხმარებელი უკვე არსებობს");
                 }
                 // get user from the database
-                var user = this.context.Users.SingleOrDefault(u => u.Id == userId);
+                var user = _context.Users.SingleOrDefault(u => u.Id == userId);
                 // apply user changes
                 user!.Email = updatedUser.Email;
                 if (!(updatedUser.Password.Trim().Length == 0))
@@ -123,8 +139,8 @@ namespace API.Controllers
                 if (user.CheckValidity())
                 {
                     // update user in the database
-                    this.context.Users.Update(user);
-                    this.context.SaveChanges();
+                    _context.Users.Update(user);
+                    _context.SaveChanges();
                     return Login(new Login(user.Email, user.Password));
                 }
                 return BadRequest("გთხოვთ შეიყვანეთ ვალიდური მონაცემები");

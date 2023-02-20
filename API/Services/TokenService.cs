@@ -17,6 +17,7 @@ namespace API.Services
                 new Claim("email", user.Email!),
                 new Claim("firstname", user.FName!),
                 new Claim("lastname", user.LName!),
+                new Claim(ClaimTypes.Role, user.Role.ToString())
             };
 
             var tokeOptions = new JwtSecurityToken(

@@ -3,6 +3,10 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace API.Models
 {
+    public enum UserRole
+    {
+        Admin, Buyer, Seller,
+    }
     [Table("Users")]
 
     public class User
@@ -14,14 +18,15 @@ namespace API.Models
         public string Password { get; set; }
         public string FName { get; set; }
         public string LName { get; set; }
-
-        public User(int id, string email, string password, string fName, string lName)
+        public UserRole Role { get; set; }
+        public User(int id, string email, string password, string fName, string lName, UserRole role)
         {
             Id = id;
             Email = email.ToLower() ?? throw new ArgumentNullException(nameof(email));
             Password = password ?? throw new ArgumentNullException(nameof(password));
             FName = fName.ToLower() ?? throw new ArgumentNullException(nameof(fName));
             LName = lName.ToLower() ?? throw new ArgumentNullException(nameof(lName));
+            Role = role;
         }
         public bool CheckValidity()
         {
@@ -45,6 +50,10 @@ namespace API.Models
                 return false;
             }
             if (!validate(LName))
+            {
+                return false;
+            }
+            if (Role != UserRole.Buyer && Role != UserRole.Seller)
             {
                 return false;
             }

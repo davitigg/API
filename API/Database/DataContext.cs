@@ -7,46 +7,50 @@ namespace API.Database
     {
         public DataContext(DbContextOptions options) : base(options) { }
 
-        public DbSet<CartItem> Cart { get; set; }
-        public DbSet<Item> Items { get; set; }
         public DbSet<User> Users { get; set; }
+        public DbSet<Product> Products { get; set; }
+        public DbSet<CartProduct> Cart { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<User>().HasData(
-                new User(
+                  new User(
                     id: 1,
-                    email: "test1@test",
+                    email: "admin@test",
                     password: "123456",
-                    fName: "fnameTest1",
-                    lName: "lnameTest1"),
+                    fName: "fnameadmin",
+                    lName: "lnameadmin",
+                    role: UserRole.Admin),
                 new User(
                     id: 2,
-                    email: "test2@test",
+                    email: "buyer1@test",
                     password: "123456",
-                    fName: "fnameTest2",
-                    lName: "lnameTest2"));
-            modelBuilder.Entity<Item>().HasData(
-                new Item(
-                    id: 1,
-                    name: "iPhone 14 Pro",
-                    price: 3000,
-                    quantity: 10),
-                 new Item(
-                    id: 2,
-                    name: "iPhone SE 2",
-                    price: 2000,
-                    quantity: 10),
-                  new Item(
+                    fName: "fnamebuyer1",
+                    lName: "lnamebuyer1",
+                    role: UserRole.Buyer),
+                new User(
                     id: 3,
-                    name: "Samsung Galaxy S22 Ultra",
-                    price: 4000,
-                    quantity: 10),
-                   new Item(
+                    email: "buyer2@test",
+                    password: "123456",
+                    fName: "fnamebuyer2",
+                    lName: "lnamebuyer2",
+                    role: UserRole.Buyer),
+                 new User(
                     id: 4,
-                    name: "Samsung Fold 4",
-                    price: 6000,
-                    quantity: 10));
+                    email: "seller1@test",
+                    password: "123456",
+                    fName: "fnameseller1",
+                    lName: "lnameseller1",
+                    role: UserRole.Seller),
+                new User(
+                    id: 5,
+                    email: "seller2@test",
+                    password: "123456",
+                    fName: "fnameseller2",
+                    lName: "lnameseller2",
+                    role: UserRole.Seller));
         }
+
     }
 }
