@@ -23,7 +23,7 @@ namespace API.Services
             var tokeOptions = new JwtSecurityToken(
                 issuer: "https://localhost:5001",
                 audience: "https://localhost:5001",
-                expires: DateTime.Now.AddMinutes(60),
+                expires: DateTime.Now.AddMinutes(120),
                 claims: claims,
                 signingCredentials: signinCredentials
             );

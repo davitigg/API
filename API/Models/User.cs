@@ -37,6 +37,10 @@ namespace API.Models
                 && !str.Contains(' ') //checks for whitespaces
                 ;
             }
+            if (!new EmailAddressAttribute().IsValid(Email))
+            {
+                return false;
+            }
             if (!validate(Email))
             {
                 return false;
@@ -53,7 +57,7 @@ namespace API.Models
             {
                 return false;
             }
-            if (Role != UserRole.Buyer && Role != UserRole.Seller)
+            if (Role != UserRole.Buyer && Role != UserRole.Seller && Role != UserRole.Admin)
             {
                 return false;
             }

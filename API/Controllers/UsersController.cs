@@ -27,6 +27,28 @@ namespace API.Controllers
             return await _context.Users.ToListAsync();
         }
 
+        // GET: api/Users/5
+        [HttpGet("{id}"), Authorize]
+        public ActionResult<User> GetUser(int id)
+        {
+            // get userId from jwt token
+            var jwtToken = tokenService.GetToken(Request);
+            var userId = Int32.Parse(tokenService.GetData(jwtToken, "id"));
+            if (userId != id && _context.Users.FindAsync(userId).Result!.Role != UserRole.Admin)
+            {
+                return Unauthorized();
+            }
+
+            var user = _context.Users.FindAsync(id).Result;
+
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            return user;
+        }
+
         // PUT: api/Users/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}"), Authorize]
@@ -90,10 +112,52 @@ namespace API.Controllers
         [HttpPost]
         public async Task<ActionResult<User>> PostUser(User user)
         {
+            if (user is null)
+            {
+                return BadRequest("Invalid client request");
+            }
+            if (user.Role == UserRole.Admin)
+            {
+                return Unauthorized("Invalid user role");
+            }
+            if (!user.CheckValidity())
+            {
+                return BadRequest("Invalid credintials");
+            }
+
+            var emailExist = _context.Users.SingleOrDefault(u => u.Email == user.Email);
+            if (emailExist != null)
+            {
+                return Conflict("User with this email already exists");
+            }
+
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
             return CreatedAtAction("GetUser", new { id = user.Id }, user);
+        }
+
+        // POST: api/Users/login
+        [HttpPost("login")]
+        public async Task<ActionResult> Login(Login loginModel)
+        {
+            if (loginModel is null)
+            {
+                return BadRequest("Invalid client request");
+            }
+            if (loginModel.Email!.Contains(' ') || loginModel.Password!.Contains(' '))
+            {
+                return BadRequest("Invalid client request");
+            }
+            var user = await _context.Users
+                            .SingleOrDefaultAsync(user => user.Email == loginModel.Email && user.Password == loginModel.Password);
+            if (user == null)
+            {
+                return Unauthorized("Invalid credintials");
+            }
+
+            var tokenString = tokenService.GenerateToken(user!);
+            return Ok(new AuthenticatedResponse { Token = tokenString });
         }
 
         // DELETE: api/Users/5
