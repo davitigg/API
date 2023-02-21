@@ -81,7 +81,7 @@ namespace API.Controllers
             }
             user.FName = updatedUser.FName;
             user.LName = updatedUser.LName;
-            user.Role = updatedUser.Role;
+            //user.Role = updatedUser.Role;
 
             if (!user.CheckValidity())
             {
