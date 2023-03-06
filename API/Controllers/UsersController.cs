@@ -131,7 +131,7 @@ namespace API.Controllers
                 return Conflict("User with this email already exists");
             }
 
-            _context.Users.Add(user);
+            await _context.Users.AddAsync(user);
             await _context.SaveChangesAsync();
 
             return CreatedAtAction("GetUser", new { id = user.Id }, user);

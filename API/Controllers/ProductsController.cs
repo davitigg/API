@@ -142,7 +142,7 @@ namespace API.Controllers
 
 
             product.Seller = seller;
-            _context.Products.Add(product);
+            await _context.Products.AddAsync(product);
             await _context.SaveChangesAsync();
 
             product.Seller.Password = "";
